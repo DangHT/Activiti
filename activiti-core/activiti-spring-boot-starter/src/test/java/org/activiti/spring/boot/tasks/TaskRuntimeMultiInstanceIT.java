@@ -66,7 +66,8 @@ import org.springframework.test.context.ActiveProfiles;
         DummyBPMNTimerFiredListener.class,
         DummyBPMNTimerScheduledListener.class,
         DummyBPMNTimerCancelledListener.class,
-        DummyBPMNTimerExecutedListener.class})
+        DummyBPMNTimerExecutedListener.class,
+        MealsConnectorConfiguration.class})
 public class TaskRuntimeMultiInstanceIT {
 
     @Autowired
@@ -1510,5 +1511,29 @@ public class TaskRuntimeMultiInstanceIT {
             .extracting(VariableInstance::getName, VariableInstance::getValue)
             .contains(tuple("meals", asList("pizza", "pasta")));
     }
+
+    @Test
+    public void parallelMultiInstance_should_collectOutputValuesForServiceTask() {
+        //given
+        ProcessInstance processInstance = processBaseRuntime
+            .startProcessWithProcessDefinitionKey("process-with-multi-instance-result-collection");
+
+        //when
+        List<VariableInstance> variables = processBaseRuntime
+            .getProcessVariablesByProcessId(processInstance.getId());
+
+        //then
+        assertThat(variables)
+            .extracting(VariableInstance::getName)
+            .contains("meals");
+        VariableInstance meals = variables
+            .stream()
+            .filter(variableInstance -> "meals".equals(variableInstance.getName()))
+            .findFirst()
+            .orElse(null);
+        List<String> mealValues = meals.getValue();
+        assertThat(mealValues).containsExactlyInAnyOrder("pizza", "pasta");
+    }
+
 
 }
